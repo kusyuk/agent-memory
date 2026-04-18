@@ -2,7 +2,7 @@ class AgentMemory < Formula
   desc "Cross-agent memory system for AI collaborators"
   homepage "https://github.com/kusyuk/agent-memory"
   url "https://github.com/kusyuk/agent-memory/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
+  sha256 "bf843d9093e80b99c8bf388e8afa801bb2d7170a8179dd4fd632131878fb0c3b"
   license "MIT"
 
   def install
