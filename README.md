@@ -27,6 +27,7 @@ npm install -g kusyuk-agent-memory
 ```bash
 brew install agent-memory
 ```
+*(Alternative: `brew install kusyuk/tap/agent-memory` if you have multiple taps.)*
 
 ### 🛠️ Developer (Local)
 
