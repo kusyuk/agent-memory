@@ -25,8 +25,7 @@ npm install -g kusyuk-agent-memory
 
 **Via Homebrew (macOS/Linux):**
 ```bash
-brew tap kusyuk/tap
-brew install agent-memory
+brew install kusyuk-agent-memory
 ```
 
 ### 🛠️ Developer (Local)
