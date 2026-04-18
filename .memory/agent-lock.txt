@@ -1,0 +1,4 @@
+# Agent Lock File
+# Format: AGENT_ID|WORK_ON|SINCE_TIMESTAMP|ESTIMATED_COMPLETION
+# Example: claude-code|implementing-auth|2026-04-18T14:30:00|2026-04-18T16:00:00
+# To lock: echo "agent-name|task|timestamp|estimated" > agent-lock.txt
