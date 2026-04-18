@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Node.js / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tgz
+
+# Project Specific
+# We keep the memory files committed so context travels with the repo.
+# However, the local lock file should not be tracked.
+.agent-memory/agent-lock.txt
+
+# Local test artifacts (if any)
+test-results/

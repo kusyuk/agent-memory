@@ -1,0 +1,29 @@
+{
+  "name": "kusyuk-agent-memory",
+  "version": "1.0.0",
+  "description": "A cross-agent memory system for preserving context between AI tools.",
+  "main": "bin/agent-memory",
+  "bin": {
+    "agent-memory": "./bin/agent-memory"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/REPLACE_ME/kusyuk-agent-memory.git"
+  },
+  "keywords": [
+    "agent",
+    "memory",
+    "cli",
+    "context",
+    "collaboration"
+  ],
+  "author": "kusyuk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/REPLACE_ME/kusyuk-agent-memory/issues"
+  },
+  "homepage": "https://github.com/REPLACE_ME/kusyuk-agent-memory#readme"
+}

@@ -4,7 +4,7 @@
 
 **Goal:** Build a local, file-based memory system that allows agentic AI assistants to preserve and transfer context when switching between tools.
 
-**Architecture:** Create a `.memory/` directory with markdown files for context, tasks, decisions, architecture, snapshot, and locking. Files include clear delimiters so any agent can read/write them without special integration.
+**Architecture:** Create a `.agent-memory/` directory with markdown files for context, tasks, decisions, architecture, snapshot, and locking. Files include clear delimiters so any agent can read/write them without special integration.
 
 **Tech Stack:** Markdown files only - no external dependencies required.
 
@@ -13,7 +13,7 @@
 ## File Structure
 
 ```
-.memory/
+.agent-memory/
 ├── context.md          # Project state (with markers)
 ├── tasks.md            # Task queue (with markers)
 ├── decisions.md        # Decisions log (with markers)
@@ -27,27 +27,27 @@
 ### Task 1: Create `.memory` directory structure
 
 **Files:**
-- Create: `.memory/` (directory)
-- Create: `.memory/.gitkeep` (placeholder to track directory in git)
+- Create: `.agent-memory/` (directory)
+- Create: `.agent-memory/.gitkeep` (placeholder to track directory in git)
 
 - [ ] **Step 1: Create the directory**
 
 ```bash
 mkdir -p .memory
-touch .memory/.gitkeep
+touch .agent-memory/.gitkeep
 ```
 
 - [ ] **Step 2: Verify structure**
 
 ```bash
-ls -la .memory/
+ls -la .agent-memory/
 # Expected: .gitkeep file exists
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .memory/
+git add .agent-memory/
 git commit -m "chore: add memory directory structure"
 ```
 
@@ -56,7 +56,7 @@ git commit -m "chore: add memory directory structure"
 ### Task 2: Create `context.md` template with markers
 
 **Files:**
-- Create: `.memory/context.md`
+- Create: `.agent-memory/context.md`
 
 **Template structure:**
 ```
@@ -81,12 +81,12 @@ git commit -m "chore: add memory directory structure"
 
 - [ ] **Step 1: Write the template file**
 
-Create `.memory/context.md` with the template structure above.
+Create `.agent-memory/context.md` with the template structure above.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/context.md
+git add .agent-memory/context.md
 git commit -m "chore: add context.md template"
 ```
 
@@ -95,7 +95,7 @@ git commit -m "chore: add context.md template"
 ### Task 3: Create `tasks.md` template with markers
 
 **Files:**
-- Create: `.memory/tasks.md`
+- Create: `.agent-memory/tasks.md`
 
 **Template structure:**
 ```
@@ -117,12 +117,12 @@ git commit -m "chore: add context.md template"
 
 - [ ] **Step 1: Write the template file**
 
-Create `.memory/tasks.md` with the template structure above.
+Create `.agent-memory/tasks.md` with the template structure above.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/tasks.md
+git add .agent-memory/tasks.md
 git commit -m "chore: add tasks.md template"
 ```
 
@@ -131,7 +131,7 @@ git commit -m "chore: add tasks.md template"
 ### Task 4: Create `decisions.md` template with markers
 
 **Files:**
-- Create: `.memory/decisions.md`
+- Create: `.agent-memory/decisions.md`
 
 **Template structure:**
 ```
@@ -153,12 +153,12 @@ git commit -m "chore: add tasks.md template"
 
 - [ ] **Step 1: Write the template file**
 
-Create `.memory/decisions.md` with the template structure above.
+Create `.agent-memory/decisions.md` with the template structure above.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/decisions.md
+git add .agent-memory/decisions.md
 git commit -m "chore: add decisions.md template"
 ```
 
@@ -167,7 +167,7 @@ git commit -m "chore: add decisions.md template"
 ### Task 5: Create `architecture.md` template with markers
 
 **Files:**
-- Create: `.memory/architecture.md`
+- Create: `.agent-memory/architecture.md`
 
 **Template structure:**
 ```
@@ -198,12 +198,12 @@ git commit -m "chore: add decisions.md template"
 
 - [ ] **Step 1: Write the template file**
 
-Create `.memory/architecture.md` with the template structure above.
+Create `.agent-memory/architecture.md` with the template structure above.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/architecture.md
+git add .agent-memory/architecture.md
 git commit -m "chore: add architecture.md template"
 ```
 
@@ -212,7 +212,7 @@ git commit -m "chore: add architecture.md template"
 ### Task 6: Create `snapshot.md` template with markers
 
 **Files:**
-- Create: `.memory/snapshot.md`
+- Create: `.agent-memory/snapshot.md`
 
 **Template structure:**
 ```
@@ -241,12 +241,12 @@ git commit -m "chore: add architecture.md template"
 
 - [ ] **Step 1: Write the template file**
 
-Create `.memory/snapshot.md` with the template structure above.
+Create `.agent-memory/snapshot.md` with the template structure above.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/snapshot.md
+git add .agent-memory/snapshot.md
 git commit -m "chore: add snapshot.md template"
 ```
 
@@ -255,7 +255,7 @@ git commit -m "chore: add snapshot.md template"
 ### Task 7: Create `agent-lock.txt` format
 
 **Files:**
-- Create: `.memory/agent-lock.txt`
+- Create: `.agent-memory/agent-lock.txt`
 
 **Format:**
 ```
@@ -281,7 +281,7 @@ Write the file with a commented example:
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .memory/agent-lock.txt
+git add .agent-memory/agent-lock.txt
 git commit -m "chore: add agent-lock.txt format"
 ```
 
@@ -293,7 +293,7 @@ git commit -m "chore: add agent-lock.txt format"
 - Create: `scripts/init-memory.sh` or `scripts/init-memory.py`
 
 **Functionality:**
-1. Create `.memory/` directory if missing
+1. Create `.agent-memory/` directory if missing
 2. Copy all template files if they don't exist
 3. Initialize snapshot with current timestamp
 
@@ -376,15 +376,15 @@ echo "=== Memory State ==="
 echo ""
 
 echo "## Context:"
-cat .memory/context.md | grep -A 100 "## Current State" | head -20
+cat .agent-memory/context.md | grep -A 100 "## Current State" | head -20
 
 echo ""
 echo "## Tasks:"
-cat .memory/tasks.md | grep -A 100 "## In Progress" | head -10
+cat .agent-memory/tasks.md | grep -A 100 "## In Progress" | head -10
 
 echo ""
 echo "## Last Snapshot:"
-cat .memory/snapshot.md | grep -A 50 "## Last Agent" | head -15
+cat .agent-memory/snapshot.md | grep -A 50 "## Last Agent" | head -15
 
 echo ""
 echo "=== Ready to work ==="
@@ -398,8 +398,8 @@ Create `scripts/agent-exit.sh`:
 #!/bin/bash
 # Agent exit hook - save state and release lock
 
-SNAPSHOT_FILE=".memory/snapshot.md"
-LOCK_FILE=".memory/agent-lock.txt"
+SNAPSHOT_FILE=".agent-memory/snapshot.md"
+LOCK_FILE=".agent-memory/agent-lock.txt"
 
 # Read current state from stdin or arguments
 # Update snapshot with current agent's work
@@ -460,7 +460,7 @@ git commit -m "chore: add agent entry/exit hooks"
 - Modify: `.gitignore` (if exists) or create documentation
 
 **Add:**
-- `.memory/` to `.gitignore` (optional - depends on if you want memory tracked)
+- `.agent-memory/` to `.gitignore` (optional - depends on if you want memory tracked)
 - OR: Document that memory should be committed
 
 **Documentation:**
@@ -477,16 +477,16 @@ This directory contains files used for cross-agent collaboration context.
 
 ## Files
 
-- `.memory/context.md` - Project state and recent changes
-- `.memory/tasks.md` - Task queue
-- `.memory/decisions.md` - Decisions log
-- `.memory/architecture.md` - High-level architecture
-- `.memory/snapshot.md` - Last agent's working state
-- `.memory/agent-lock.txt` - Coordination lock
+- `.agent-memory/context.md` - Project state and recent changes
+- `.agent-memory/tasks.md` - Task queue
+- `.agent-memory/decisions.md` - Decisions log
+- `.agent-memory/architecture.md` - High-level architecture
+- `.agent-memory/snapshot.md` - Last agent's working state
+- `.agent-memory/agent-lock.txt` - Coordination lock
 
 ## For Agents
 
-1. **On startup:** Read all `.memory/*.md` files to understand context
+1. **On startup:** Read all `.agent-memory/*.md` files to understand context
 2. **During work:** Update relevant files as progress is made
 3. **On exit:** Write a snapshot with current state and next steps
 4. **Never overwrite memory files blindly** - append or update sections
@@ -508,7 +508,7 @@ git commit -m "docs: add memory file documentation"
 ## Plan Self-Review
 
 **1. Spec coverage check:**
-- ✅ File structure (.memory/ directory) - Task 1
+- ✅ File structure (.agent-memory/ directory) - Task 1
 - ✅ context.md template - Task 2
 - ✅ tasks.md template - Task 3
 - ✅ decisions.md template - Task 4

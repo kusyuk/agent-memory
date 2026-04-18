@@ -7,7 +7,7 @@ A local, file-based memory system that allows agentic AI assistants to preserve 
 ## Architecture
 
 ```
-.memory/
+.agent-memory/
 ├── context.md          # Current project state and recent work
 ├── tasks.md            # Incomplete tasks and progress tracking
 ├── decisions.md        # Key decisions and their rationale
@@ -18,7 +18,7 @@ A local, file-based memory system that allows agentic AI assistants to preserve 
 
 ## Data Flow
 
-1. **Agent startup:** Read all `.memory/*.md` files to understand project state
+1. **Agent startup:** Read all `.agent-memory/*.md` files to understand project state
 2. **Context integration:** Incorporate memory into system prompt/workspace context
 3. **During work:** Update relevant memory files as progress is made
 4. **Agent exit:** Write snapshot with current state and next steps

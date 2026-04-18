@@ -1,0 +1,408 @@
+#!/bin/bash
+# agent-memory: CLI for cross-agent memory management
+# Version: 1.0.0
+
+set -euo pipefail
+
+# --- Utilities ---
+
+find_memory_dir() {
+    local curr="$PWD"
+    while [[ "$curr" != "/" ]]; do
+        if [[ -d "$curr/.agent-memory" ]]; then
+            echo "$curr/.agent-memory"
+            return 0
+        fi
+        curr="$(dirname "$curr")"
+    done
+    return 1
+}
+
+log_error() {
+    echo "Error: $1" >&2
+}
+
+show_help() {
+    echo "Usage: agent-memory <command> [args]"
+    echo ""
+    echo "Commands:"
+    echo "  init              Initialize .agent-memory/ directory with templates"
+    echo "  save [comp] [cur] [next]  Save current state to snapshot"
+    echo "  resume [agent-id] Load and display memory state for next agent"
+    echo "  list-agents       List all agents with specific contexts"
+    echo "  status            Show current state of memory files"
+    echo "  validate          Verify integrity of memory files"
+    echo "  help              Display this help"
+    echo ""
+    echo "The Handoff Workflow:"
+    echo "  1. Agent A (Exiting): Run 'agent-memory save' to preserve context."
+    echo "  2. You (Human): Open the new AI Agent (e.g. Antigravity)."
+    echo "  3. You (Human): Type the resume command directly into the AI's chat:"
+    echo "     \"agent-memory resume [agent-id]\""
+    echo "  4. Result: The AI agent will run the command, summarize the session,"
+    echo "     and ask for your confirmation before starting the next task."
+    echo ""
+}
+
+# --- Commands ---
+
+cmd_validate() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ directory found."
+        return 1
+    fi
+
+    echo "Validating memory in $mem_dir..."
+    local errors=0
+    local required_files=("context.md" "tasks.md" "decisions.md" "architecture.md" "snapshot.md" "agent-lock.txt")
+
+    for f in "${required_files[@]}"; do
+        if [[ ! -f "$mem_dir/$f" ]]; then
+            echo " [FAIL] Missing file: $f"
+            errors=$((errors + 1))
+        else
+            if [[ "$f" == *.md ]]; then
+                if ! grep -q "AGENT MEMORY" "$mem_dir/$f"; then
+                    echo " [FAIL] Missing header marker in: $f"
+                    errors=$((errors + 1))
+                else
+                    echo " [OK] $f"
+                fi
+            else
+                echo " [OK] $f"
+            fi
+        fi
+    done
+
+    if [[ $errors -eq 0 ]]; then
+        echo "Validation SUCCESS: All files present and valid."
+        return 0
+    else
+        echo "Validation FAILED: $errors error(s) found."
+        return 1
+    fi
+}
+
+cmd_init() {
+    local target_dir=".agent-memory"
+    if [[ -d "$target_dir" ]]; then
+        echo "Memory already initialized in $target_dir/"
+    else
+        echo "Initializing memory in $target_dir/..."
+        mkdir -p "$target_dir"
+        
+        # Create context.md
+        cat > "$target_dir/context.md" << 'EOF'
+# Project Context
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## Current State
+[Agent fills this in]
+
+## Recent Changes
+- [Last agent] - Change description (YYYY-MM-DD)
+
+## Active Work Streams
+- [ ] Task description
+
+## Known Issues/Blockers
+- [ ] Issue description
+EOF
+
+        # Create tasks.md
+        cat > "$target_dir/tasks.md" << 'EOF'
+# Tasks
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## In Progress
+- [ ] ID: `task-001` - Description (assigned: last-agent, created: 2026-04-18)
+
+## TODO
+- [ ] ID: `task-002` - Description (assigned: next-agent, created: 2026-04-18, priority: HIGH)
+
+## Completed
+- [x] ID: `task-000` - Description (completed: 2026-04-18)
+EOF
+
+        # Create decisions.md
+        cat > "$target_dir/decisions.md" << 'EOF'
+# Decisions Log
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## Decision Log
+
+### [YYYY-MM-DD] Decision ID
+- **Problem:** What was being decided
+- **Options considered:** Option A, Option B, Option C
+- **Chosen:** Option B
+- **Rationale:** Why this option was selected
+- **By:** agent-name
+EOF
+
+        # Create architecture.md
+        cat > "$target_dir/architecture.md" << 'EOF'
+# Architecture
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## High-Level Structure
+[Diagram description or file structure]
+
+## Technology Stack
+- Framework: [name]
+- Language: [name]
+- Key dependencies: [list]
+
+## Key Patterns
+- [Pattern name]: Description
+
+## API Contracts
+[API documentation or references]
+
+## Data Models
+[Schema or type definitions]
+EOF
+
+        # Create snapshot.md
+        cat > "$target_dir/snapshot.md" << 'EOF'
+# Agent Snapshot
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## Last Agent
+- Agent ID: [claude-code/antigravity/etc]
+- Session timestamp: [YYYY-MM-DD HH:MM:SS]
+
+## Recent Work
+- Last completed action: [description]
+- Current focus: [what's being worked on]
+
+## Next Steps
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+## Context Notes
+[Any additional notes for next agent]
+
+## Agent Contexts
+
+### gemini-cli
+- Focus: [gemini-cli-specific goals]
+- Tip: [gemini-cli-specific workflow tips]
+
+### antigravity
+- Focus: [antigravity-specific goals]
+- Tip: [antigravity-specific workflow tips]
+
+### claude-code
+- Focus: [claude-code-specific goals]
+- Tip: [claude-code-specific workflow tips]
+
+### github-copilot
+- Focus: [github-copilot-specific goals]
+- Tip: [github-copilot-specific workflow tips]
+
+### codex
+- Focus: [codex-specific goals]
+- Tip: [codex-specific workflow tips]
+EOF
+
+        # Create agent-lock.txt
+        cat > "$target_dir/agent-lock.txt" << 'EOF'
+# Agent Lock File
+# Format: AGENT_ID|WORK_ON|SINCE_TIMESTAMP|ESTIMATED_COMPLETION
+# Example: claude-code|implementing-auth|2026-04-18T14:30:00|2026-04-18T16:00:00
+# To lock: echo "agent-name|task|timestamp|estimated" > agent-lock.txt
+EOF
+        
+        echo "Memory initialized."
+    fi
+}
+
+cmd_save() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ directory found in parents."
+        exit 1
+    fi
+
+    local completed="${1:-none}"
+    local current="${2:-none}"
+    local next="${3:-none}"
+    local snapshot_file="$mem_dir/snapshot.md"
+    local lock_file="$mem_dir/agent-lock.txt"
+
+    # Preserve Agent Contexts section
+    local agent_contexts=""
+    if [[ -f "$snapshot_file" ]]; then
+        agent_contexts=$(sed -n '/## Agent Contexts/,$p' "$snapshot_file" 2>/dev/null || true)
+    fi
+
+    cat > "$snapshot_file" << EOF
+# Agent Snapshot
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: $(date -Iseconds) -->
+
+## Last Agent
+- Agent ID: $(whoami)
+- Session timestamp: $(date -Iseconds)
+
+## Recent Work
+- Last completed action: $completed
+- Current focus: $current
+
+## Next Steps
+1. $next
+
+## Context Notes
+Work continued from previous session.
+
+$agent_contexts
+EOF
+
+    # Release lock (preserve header)
+    local header
+    header=$(grep "^#" "$lock_file")
+    echo "$header" > "$lock_file"
+    echo "State saved to $snapshot_file"
+}
+
+cmd_resume() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ directory found in parents."
+        exit 1
+    fi
+
+    local agent_id="${1:-generic}"
+
+    echo "================================================================================"
+    echo " 🤖 USER GUIDE (For Humans)"
+    echo "================================================================================"
+    echo " If you are reading this in your terminal, you do not need to copy-paste this."
+    echo " To hand off context to an AI Agent (like Gemini or Antigravity):"
+    echo " 1. Open the target AI Agent's chat interface."
+    echo " 2. Type the following command and press Enter:"
+    echo "    \"agent-memory resume $agent_id\""
+    echo " The agent will run the command, internalize the state, and ask you to proceed."
+    echo "================================================================================"
+    echo ""
+    echo " [SYSTEM PROMPT FOR AI AGENT: CONTEXT HANDOFF]"
+    echo "================================================================================"
+    echo "Hello AI Assistant. You are taking over a development session."
+    echo "Please read the following project context and task status carefully."
+    echo ""
+    echo "## Global Context:"
+    grep -A 100 "## Current State" "$mem_dir/context.md" | head -20
+    echo ""
+    echo "## Active Tasks:"
+    grep -A 100 "## In Progress" "$mem_dir/tasks.md" | head -10
+    echo ""
+    echo "## Last Session Snapshot:"
+    grep -A 50 "## Last Agent" "$mem_dir/snapshot.md" | head -15
+    echo ""
+
+    if [[ "$agent_id" != "generic" ]]; then
+        echo "## Targeted Instructions for $agent_id:"
+        if grep -q "### $agent_id" "$mem_dir/snapshot.md"; then
+            # Extract the section for the specific agent
+            sed -n "/### $agent_id/,/###/p" "$mem_dir/snapshot.md" | grep -v "###"
+        else
+            echo "No specific instructions found for agent: $agent_id"
+        fi
+        echo ""
+    fi
+
+    echo "--------------------------------------------------------------------------------"
+    echo " [END SYSTEM PROMPT]"
+    echo " INSTRUCTION: "
+    echo " 1. Acknowledge this context and summarize the current state for the user."
+    echo " 2. Ask for the user's confirmation before proceeding with the 'Next Steps'."
+    echo " 3. Do NOT start work until the user confirms."
+    echo "================================================================================"
+}
+
+cmd_list_agents() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ directory found in parents."
+        exit 1
+    fi
+
+    local snapshot_file="$mem_dir/snapshot.md"
+    if [[ ! -f "$snapshot_file" ]]; then
+        echo "No snapshot.md found."
+        return 0
+    fi
+
+    echo "Available Agent Contexts:"
+    if grep -q "## Agent Contexts" "$snapshot_file"; then
+        # Extract headings starting with ### after ## Agent Contexts
+        sed -n '/## Agent Contexts/,$p' "$snapshot_file" | grep "^### " | sed 's/^### //' | while read -r agent; do
+            echo " - $agent"
+        done
+    else
+        echo "No Agent Contexts section found in snapshot.md"
+    fi
+}
+
+cmd_status() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        echo "No .agent-memory/ found."
+        exit 0
+    fi
+
+    echo "Memory Directory: $mem_dir"
+    echo "Files:"
+    for f in "$mem_dir"/*.{md,txt}; do
+        [ -e "$f" ] || continue
+        local size
+        size=$(ls -lh "$f" | awk '{print $5}')
+        echo " - $(basename "$f") ($size)"
+    done
+    
+    if grep -qE "^[^#[:space:]]" "$mem_dir/agent-lock.txt" 2>/dev/null; then
+        echo "Lock: ACTIVE - $(grep -v "^#" "$mem_dir/agent-lock.txt" | head -1)"
+    else
+        echo "Lock: NONE"
+    fi
+}
+
+# --- Entry Point ---
+
+if [[ $# -lt 1 ]]; then
+    show_help
+    exit 1
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    init)     cmd_init "$@" ;;
+    save)     cmd_save "$@" ;;
+    resume)   cmd_resume "$@" ;;
+    list-agents) cmd_list_agents "$@" ;;
+    status)   cmd_status "$@" ;;
+    validate) cmd_validate "$@" ;;
+    help)     show_help ;;
+    *)        log_error "Unknown command: $COMMAND"; show_help; exit 1 ;;
+esac

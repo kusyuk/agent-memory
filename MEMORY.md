@@ -1,22 +1,23 @@
-# Memory Files
+# Agent Memory Files
 
 This directory contains files used for cross-agent collaboration context.
 
 ## Files
 
-- `.memory/context.md` - Project state and recent changes
-- `.memory/tasks.md` - Task queue
-- `.memory/decisions.md` - Decisions log
-- `.memory/architecture.md` - High-level architecture
-- `.memory/snapshot.md` - Last agent's working state
-- `.memory/agent-lock.txt` - Coordination lock
+- `.agent-memory/context.md` - Project state and recent changes
+- `.agent-memory/tasks.md` - Task queue
+- `.agent-memory/decisions.md` - Decisions log
+- `.agent-memory/architecture.md` - High-level architecture
+- `.agent-memory/snapshot.md` - Last agent's working state
+- `.agent-memory/agent-lock.txt` - Coordination lock
 
 ## For Agents
 
-1. **On startup:** Read all `.memory/*.md` files to understand context
+1. **On startup:** Read all `.agent-memory/*.md` files to understand context
 2. **During work:** Update relevant files as progress is made
 3. **On exit:** Write a snapshot with current state and next steps
 4. **Never overwrite memory files blindly** - append or update sections
+5. **Directory search:** Search upward from current directory for `.agent-memory/`
 
 ## For Humans
 
