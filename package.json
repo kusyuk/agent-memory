@@ -11,19 +11,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/REPLACE_ME/kusyuk-agent-memory.git"
+    "url": "git+https://github.com/kusyuk/agent-memory.git"
   },
   "keywords": [
     "agent",
     "memory",
     "cli",
     "context",
-    "collaboration"
+    "ai"
   ],
   "author": "kusyuk",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/REPLACE_ME/kusyuk-agent-memory/issues"
+    "url": "https://github.com/kusyuk/agent-memory/issues"
   },
-  "homepage": "https://github.com/REPLACE_ME/kusyuk-agent-memory#readme"
+  "homepage": "https://github.com/kusyuk/agent-memory#readme"
 }

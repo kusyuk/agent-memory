@@ -1,7 +1,7 @@
 class AgentMemory < Formula
   desc "Cross-agent memory system for AI collaborators"
-  homepage "https://github.com/kusyuk/agentic-memory"
-  url "https://github.com/kusyuk/agentic-memory/archive/refs/tags/v1.0.0.tar.gz"
+  homepage "https://github.com/kusyuk/agent-memory"
+  url "https://github.com/kusyuk/agent-memory/archive/refs/tags/v1.0.0.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000" # TODO: Update after release
   license "MIT"
 

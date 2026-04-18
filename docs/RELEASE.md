@@ -32,7 +32,7 @@ Homebrew requires a stable source URL (tarball) to install.
 ## 4. Update Homebrew Formula
 1.  **Get the SHA256** of the release tarball:
     ```bash
-    curl -L https://github.com/REPLACE_ME/kusyuk-agent-memory/archive/refs/tags/v1.0.0.tar.gz -o agent-memory.tar.gz
+    curl -L https://github.com/kusyuk/agent-memory/archive/refs/tags/v1.0.0.tar.gz -o agent-memory.tar.gz
     shasum -a 256 agent-memory.tar.gz
     ```
 2.  **Update `Formula/agent-memory.rb`**:

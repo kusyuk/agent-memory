@@ -33,8 +33,8 @@ brew install agent-memory
 
 If you prefer to install locally from source:
 ```bash
-git clone https://github.com/kusyuk/agentic-memory.git
-cd kusyuk-agent-memory
+git clone https://github.com/kusyuk/agent-memory.git
+cd agent-memory
 make install
 ```
 
