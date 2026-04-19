@@ -51,7 +51,10 @@ This will create a `.agent-memory/` directory with the following structure:
 -   `tasks.md`: The active task queue.
 -   `decisions.md`: Log of key design decisions.
 -   `architecture.md`: Technical structure and patterns.
+-   `implementation_plan.md`: The active implementation plan.
+-   `agents.md`: Guidelines and tips for different AI agents.
 -   `snapshot.md`: Last agent's exit state.
+-   `history/`: Directory containing timestamped project checkpoints.
 -   `agent-lock.txt`: Coordination lock.
 
 ---
@@ -73,6 +76,12 @@ Lists all agents that have specific contexts defined in the `snapshot.md` file. 
 
 ### `agent-memory status`
 Displays the current status of all memory files and indicates if an agent currently holds a lock on the project.
+
+### `agent-memory history`
+Displays a list of recent local sessions (checkpoints) for the current project. Each checkpoint includes the timestamp and the last completed action.
+
+### `agent-memory list-sessions`
+**Global Command.** Displays a registry of all projects where you have used Agentic Memory, showing the latest session status for each. This is your high-level "Session Picker" view.
 
 ### `agent-memory validate`
 Verifies the integrity of the `.agent-memory/` directory and ensures all required files are present and contain the mandatory header markers.

@@ -8,7 +8,10 @@ This directory contains files used for cross-agent collaboration context.
 - `.agent-memory/tasks.md` - Task queue
 - `.agent-memory/decisions.md` - Decisions log
 - `.agent-memory/architecture.md` - High-level architecture
+- `.agent-memory/implementation_plan.md` - Active implementation plan
+- `.agent-memory/agents.md` - Agent-specific guidelines and tips
 - `.agent-memory/snapshot.md` - Last agent's working state
+- `.agent-memory/history/` - Project session checkpoints
 - `.agent-memory/agent-lock.txt` - Coordination lock
 
 ## For Agents
@@ -18,6 +21,7 @@ This directory contains files used for cross-agent collaboration context.
 3. **On exit:** Write a snapshot with current state and next steps
 4. **Never overwrite memory files blindly** - append or update sections
 5. **Directory search:** Search upward from current directory for `.agent-memory/`
+6. **Authority:** Files in `.agent-memory/` (especially `tasks.md` and `implementation_plan.md`) are the **absolute source of truth**. Ignore conflicting planning files in `docs/` or root.
 
 ## For Humans
 
