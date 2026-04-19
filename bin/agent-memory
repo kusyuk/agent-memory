@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# --- Configuration ---
+
+REGISTRY_DIR="$HOME/.agent-memory"
+REGISTRY_FILE="$REGISTRY_DIR/registry.log"
+
 # --- Utilities ---
 
 find_memory_dir() {
@@ -18,6 +23,28 @@ find_memory_dir() {
     return 1
 }
 
+update_global_registry() {
+    local project_path
+    project_path=$(pwd)
+    local agent_id
+    agent_id=$(whoami)
+    local timestamp
+    timestamp=$(date -Iseconds)
+    local last_action="${1:-none}"
+
+    mkdir -p "$REGISTRY_DIR"
+    
+    local tmp_registry
+    tmp_registry=$(mktemp)
+    
+    if [[ -f "$REGISTRY_FILE" ]]; then
+        grep -v "|$project_path|" "$REGISTRY_FILE" > "$tmp_registry" || true
+    fi
+    
+    echo "$timestamp|$project_path|$agent_id|$last_action" >> "$tmp_registry"
+    mv "$tmp_registry" "$REGISTRY_FILE"
+}
+
 log_error() {
     echo "Error: $1" >&2
 }
@@ -28,19 +55,21 @@ show_help() {
     echo "Commands:"
     echo "  init              Initialize .agent-memory/ directory with templates"
     echo "  save [comp] [cur] [next]  Save current state to snapshot"
-    echo "  resume [agent-id] Load and display memory state for next agent"
+    echo "  import <file> [name] Import external artifact (e.g. from brain folder)"
+    echo "  resume [agent-id] [ts|--pick] Load memory state for next agent"
     echo "  list-agents       List all agents with specific contexts"
     echo "  status            Show current state of memory files"
+    echo "  history           Show local session history for this project"
+    echo "  list-sessions     Show global history of projects (Registry)"
     echo "  validate          Verify integrity of memory files"
     echo "  help              Display this help"
     echo ""
     echo "The Handoff Workflow:"
-    echo "  1. Agent A (Exiting): Run 'agent-memory save' to preserve context."
-    echo "  2. You (Human): Open the new AI Agent (e.g. Antigravity)."
-    echo "  3. You (Human): Type the resume command directly into the AI's chat:"
-    echo "     \"agent-memory resume [agent-id]\""
-    echo "  4. Result: The AI agent will run the command, summarize the session,"
-    echo "     and ask for your confirmation before starting the next task."
+    echo "  1. 🧠 (Optional): Run 'agent-memory import <brain_plan_path>' if you have a resolved plan"
+    echo "  2. 💾 Agent A (Exiting): Run 'agent-memory save \"Completed feature X\"'"
+    echo "  3. 🤖 You (Human): Open your next AI Agent (e.g. Claude, Antigravity)"
+    echo "  4. 📋 You (Human): Paste 'agent-memory resume [agent-id]' into the AI's chat"
+    echo "  5. 🚀 Result: The new Agent internalizes the context and continues the work"
     echo ""
 }
 
@@ -55,7 +84,7 @@ cmd_validate() {
 
     echo "Validating memory in $mem_dir..."
     local errors=0
-    local required_files=("context.md" "tasks.md" "decisions.md" "architecture.md" "snapshot.md" "agent-lock.txt")
+    local required_files=("context.md" "tasks.md" "decisions.md" "architecture.md" "snapshot.md" "implementation_plan.md" "agents.md" "agent-lock.txt")
 
     for f in "${required_files[@]}"; do
         if [[ ! -f "$mem_dir/$f" ]]; then
@@ -86,13 +115,17 @@ cmd_validate() {
 
 cmd_init() {
     local target_dir=".agent-memory"
-    if [[ -d "$target_dir" ]]; then
-        echo "Memory already initialized in $target_dir/"
-    else
+    if [[ ! -d "$target_dir" ]]; then
         echo "Initializing memory in $target_dir/..."
         mkdir -p "$target_dir"
-        
-        # Create context.md
+        mkdir -p "$target_dir/history"
+    else
+        echo "Updating memory in $target_dir/..."
+    fi
+    
+    # Create context.md
+    if [[ ! -f "$target_dir/context.md" ]]; then
+        echo " - Creating context.md"
         cat > "$target_dir/context.md" << 'EOF'
 # Project Context
 
@@ -112,8 +145,11 @@ cmd_init() {
 ## Known Issues/Blockers
 - [ ] Issue description
 EOF
+    fi
 
-        # Create tasks.md
+    # Create tasks.md
+    if [[ ! -f "$target_dir/tasks.md" ]]; then
+        echo " - Creating tasks.md"
         cat > "$target_dir/tasks.md" << 'EOF'
 # Tasks
 
@@ -130,8 +166,11 @@ EOF
 ## Completed
 - [x] ID: `task-000` - Description (completed: 2026-04-18)
 EOF
+    fi
 
-        # Create decisions.md
+    # Create decisions.md
+    if [[ ! -f "$target_dir/decisions.md" ]]; then
+        echo " - Creating decisions.md"
         cat > "$target_dir/decisions.md" << 'EOF'
 # Decisions Log
 
@@ -148,8 +187,11 @@ EOF
 - **Rationale:** Why this option was selected
 - **By:** agent-name
 EOF
+    fi
 
-        # Create architecture.md
+    # Create architecture.md
+    if [[ ! -f "$target_dir/architecture.md" ]]; then
+        echo " - Creating architecture.md"
         cat > "$target_dir/architecture.md" << 'EOF'
 # Architecture
 
@@ -174,8 +216,11 @@ EOF
 ## Data Models
 [Schema or type definitions]
 EOF
+    fi
 
-        # Create snapshot.md
+    # Create snapshot.md
+    if [[ ! -f "$target_dir/snapshot.md" ]]; then
+        echo " - Creating snapshot.md"
         cat > "$target_dir/snapshot.md" << 'EOF'
 # Agent Snapshot
 
@@ -198,40 +243,137 @@ EOF
 
 ## Context Notes
 [Any additional notes for next agent]
+EOF
+    fi
 
-## Agent Contexts
+    # Create agents.md
+    if [[ ! -f "$target_dir/agents.md" ]]; then
+        echo " - Creating agents.md"
+        cat > "$target_dir/agents.md" << 'EOF'
+# Agent Guidelines
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+<!-- Last updated: 2026-04-18 -->
+
+## Global Instructions
+- Maintain formatting standards in all markdown files.
+- Ensure task IDs in `tasks.md` remain unique.
+
+## Agent Specifics
 
 ### gemini-cli
-- Focus: [gemini-cli-specific goals]
-- Tip: [gemini-cli-specific workflow tips]
+- **Focus**: Maintain POSIX-compliant bash scripts and clear Markdown documentation.
+- **Tip**: Always run `./bin/agent-memory validate` before finalizing changes.
 
 ### antigravity
-- Focus: [antigravity-specific goals]
-- Tip: [antigravity-specific workflow tips]
+- **Focus**: Global project indexing and semantic code search.
+- **Tip**: Ensure all `.md` files are fully updated so the indexer provides accurate cross-references.
 
 ### claude-code
-- Focus: [claude-code-specific goals]
-- Tip: [claude-code-specific workflow tips]
+- **Focus**: Strategic refactoring and large-scale architectural improvements.
+- **Tip**: Review `architecture.md` to ensure any new patterns are documented.
 
 ### github-copilot
-- Focus: [github-copilot-specific goals]
-- Tip: [github-copilot-specific workflow tips]
+- **Focus**: Real-time code suggestions and autocomplete.
+- **Tip**: Use descriptive function names to get more relevant suggestions.
 
 ### codex
-- Focus: [codex-specific goals]
-- Tip: [codex-specific workflow tips]
+- **Focus**: Natural language to code translation and algorithm generation.
+- **Tip**: Provide clear, step-by-step comments to guide the generation process.
 EOF
+    fi
 
-        # Create agent-lock.txt
+
+    # Create agent-lock.txt
+    if [[ ! -f "$target_dir/agent-lock.txt" ]]; then
+        echo " - Creating agent-lock.txt"
         cat > "$target_dir/agent-lock.txt" << 'EOF'
 # Agent Lock File
 # Format: AGENT_ID|WORK_ON|SINCE_TIMESTAMP|ESTIMATED_COMPLETION
 # Example: claude-code|implementing-auth|2026-04-18T14:30:00|2026-04-18T16:00:00
 # To lock: echo "agent-name|task|timestamp|estimated" > agent-lock.txt
 EOF
-        
-        echo "Memory initialized."
     fi
+    # Smart Import existing plans/docs
+    if [[ ! -f "$target_dir/implementation_plan.md" ]]; then
+        echo " - Checking for existing project plans..."
+        local source_plan=""
+        if [[ -f "./implementation_plan.md" ]]; then
+            source_plan="./implementation_plan.md"
+        elif [[ -f "./.agent/implementation_plan.md" ]]; then
+            source_plan="./.agent/implementation_plan.md"
+        fi
+
+        if [[ -n "$source_plan" ]]; then
+            echo " - Found existing plan at $source_plan. Importing to memory..."
+            cp "$source_plan" "$target_dir/implementation_plan.md"
+        else
+            echo " - Creating implementation_plan.md template"
+            cat > "$target_dir/implementation_plan.md" << 'EOF'
+# Implementation Plan
+
+<!-- AGENT MEMORY - DO NOT EDIT ABOVE THIS LINE -->
+<!-- Version: 1.0.0 -->
+
+## Goal
+[High-level goal of current work]
+
+## Proposed Changes
+[Detailed plan for the current objective]
+
+## Verification Plan
+[How to verify the changes]
+EOF
+        fi
+    fi
+
+    echo "Memory initialized/updated."
+}
+
+cmd_import() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ directory found in parents."
+        exit 1
+    fi
+
+    if [[ $# -lt 1 ]]; then
+        log_error "Source file(s) required: agent-memory import <file1> <file2> ..."
+        exit 1
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        local src="$1"
+        shift
+
+        if [[ ! -f "$src" ]]; then
+            echo " [SKIP] File not found: $src"
+            continue
+        fi
+
+        local filename=$(basename "$src")
+        local target_name="$filename"
+
+        # Auto-detect target mapping
+        if [[ "$filename" == *"implementation_plan.md"* || "$filename" == *"plan.md"* ]]; then
+            target_name="implementation_plan.md"
+        elif [[ "$filename" == *"walkthrough.md"* ]]; then
+            target_name="walkthrough.md"
+        elif [[ "$filename" == *"tasks.md"* || "$filename" == *"task.md"* ]]; then
+            target_name="tasks.md"
+        elif [[ "$filename" == *"context.md"* ]]; then
+            target_name="context.md"
+        elif [[ "$filename" == *"architecture.md"* ]]; then
+            target_name="architecture.md"
+        elif [[ "$filename" == *"snapshot.md"* ]]; then
+            target_name="snapshot.md"
+        fi
+
+        echo "Importing $src -> $mem_dir/$target_name..."
+        cp "$src" "$mem_dir/$target_name"
+    done
+    echo "Import batch completed."
 }
 
 cmd_save() {
@@ -241,17 +383,81 @@ cmd_save() {
         exit 1
     fi
 
-    local completed="${1:-none}"
-    local current="${2:-none}"
-    local next="${3:-none}"
+    local completed=""
+    local current=""
+    local next=""
+    
+    # Positional argument parsing (legacy support)
+    local pos_count=0
+    while [[ $# -gt 0 && ! "$1" =~ ^-- && $pos_count -lt 3 ]]; do
+        case $pos_count in
+            0) completed="$1" ;;
+            1) current="$1" ;;
+            2) next="$1" ;;
+        esac
+        pos_count=$((pos_count + 1))
+        shift
+    done
+
+    # Flag-based argument parsing
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --plan)
+                if [[ -f "$2" ]]; then
+                    echo "Updating implementation_plan.md from $2..."
+                    cp "$2" "$mem_dir/implementation_plan.md"
+                else
+                    log_error "Plan file not found: $2"
+                fi
+                shift 2
+                ;;
+            --artifact)
+                if [[ -e "$2" ]]; then
+                    echo "Saving artifact: $2"
+                    mkdir -p "$mem_dir/artifacts"
+                    cp -R "$2" "$mem_dir/artifacts/"
+                else
+                    log_error "Artifact not found: $2"
+                fi
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+    
+    # Intelligent Auto-Discovery if arguments are missing or "none"
+    if [[ -z "$completed" || "$completed" == "none" ]]; then
+        if [[ -f "$mem_dir/tasks.md" ]]; then
+            completed=$(grep "^- \[x\]" "$mem_dir/tasks.md" | tail -1 | sed -E 's/- \[x\] (ID: [^ ]+ - )?//' | xargs)
+        fi
+    fi
+
+    if [[ -z "$current" || "$current" == "none" ]]; then
+        if [[ -f "$mem_dir/tasks.md" ]]; then
+            current=$(sed -n '/## In Progress/,/##/p' "$mem_dir/tasks.md" | grep "^- \[ \]" | head -1 | sed -E 's/- \[ \] (ID: [^ ]+ - )?//' | xargs)
+        fi
+        # Fallback to Implementation Plan title if tasks are empty
+        if [[ ( -z "$current" || "$current" == "none" ) && -f "$mem_dir/implementation_plan.md" ]]; then
+            current=$(grep "^# " "$mem_dir/implementation_plan.md" | head -1 | sed 's/# //' | xargs)
+        fi
+    fi
+
+    if [[ -z "$next" || "$next" == "none" ]]; then
+        if [[ -f "$mem_dir/tasks.md" ]]; then
+            next=$(sed -n '/## TODO/,/##/p' "$mem_dir/tasks.md" | grep "^- \[ \]" | head -1 | sed -E 's/- \[ \] (ID: [^ ]+ - )?//' | xargs)
+        fi
+    fi
+
+    # Final fallbacks to preserve "none" if absolutely nothing found
+    completed=${completed:-none}
+    current=${current:-none}
+    next=${next:-none}
+
     local snapshot_file="$mem_dir/snapshot.md"
     local lock_file="$mem_dir/agent-lock.txt"
-
-    # Preserve Agent Contexts section
-    local agent_contexts=""
-    if [[ -f "$snapshot_file" ]]; then
-        agent_contexts=$(sed -n '/## Agent Contexts/,$p' "$snapshot_file" 2>/dev/null || true)
-    fi
+    local history_dir="$mem_dir/history"
 
     cat > "$snapshot_file" << EOF
 # Agent Snapshot
@@ -273,9 +479,16 @@ cmd_save() {
 
 ## Context Notes
 Work continued from previous session.
-
-$agent_contexts
 EOF
+
+    # Local Checkpoint
+    local ts
+    ts=$(date +%Y-%m-%d_%H%M%S)
+    mkdir -p "$history_dir/$ts"
+    cp "$mem_dir"/*.md "$history_dir/$ts/"
+
+    # Global Registry Update
+    update_global_registry "$completed"
 
     # Release lock (preserve header)
     local header
@@ -292,50 +505,157 @@ cmd_resume() {
     fi
 
     local agent_id="${1:-generic}"
+    local selection="${2:-}"
+    local source_dir="$mem_dir"
+
+    if [[ -n "$selection" ]]; then
+        local hist_dir="$mem_dir/history"
+        if [[ "$selection" == "--pick" ]]; then
+            if [[ ! -d "$hist_dir" ]]; then
+                log_error "No history directory found."
+                exit 1
+            fi
+            local sessions=()
+            # Workaround for sessions array in bash < 4
+            for s in $(ls -r "$hist_dir"); do sessions+=("$s"); done
+            
+            if [[ ${#sessions[@]} -eq 0 ]]; then
+                log_error "No history sessions found."
+                exit 1
+            fi
+            
+            echo "Select a historical session to resume:"
+            for i in "${!sessions[@]}"; do
+                local action="none"
+                local s_path="$hist_dir/${sessions[$i]}"
+                if [[ -f "$s_path/snapshot.md" ]]; then
+                    action=$(grep "Last completed action:" "$s_path/snapshot.md" | cut -d':' -f2- | xargs)
+                fi
+                printf " [%d] %s (%s)\n" "$((i+1))" "${sessions[$i]}" "$action"
+            done
+            
+            echo -n "Enter selection (1-${#sessions[@]}): "
+            # Use </dev/tty to read even if stdin is piped
+            read -r choice < /dev/tty || true
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#sessions[@]}" ]; then
+                local idx=$((choice-1))
+                selection="${sessions[$idx]}"
+                echo "Selected checkpoint: $selection"
+            else
+                log_error "Invalid selection."
+                exit 1
+            fi
+        fi
+        
+        if [[ ! -d "$hist_dir/$selection" ]]; then
+            log_error "Historical session not found: $selection"
+            exit 1
+        fi
+        source_dir="$hist_dir/$selection"
+        echo "Source: Using historical checkpoint $selection"
+    fi
 
     echo "================================================================================"
-    echo " 🤖 USER GUIDE (For Humans)"
+    echo " 🤖 PROJECT HANDOFF GUIDE (Human Instructions)"
     echo "================================================================================"
-    echo " If you are reading this in your terminal, you do not need to copy-paste this."
-    echo " To hand off context to an AI Agent (like Gemini or Antigravity):"
-    echo " 1. Open the target AI Agent's chat interface."
-    echo " 2. Type the following command and press Enter:"
-    echo "    \"agent-memory resume $agent_id\""
-    echo " The agent will run the command, internalize the state, and ask you to proceed."
+    echo " You are about to transfer project context to a new AI Agent."
+    echo ""
+    echo " 1. 📋 COPY the Resume Command below:"
+    echo "    \"agent-memory resume $agent_id ${selection:-}\""
+    echo ""
+    echo " 2. 🚀 PASTE it directly into your AI Agent's chat interface."
+    echo ""
+    echo " 3. ✨ RESULT: The Agent will run the command, internalize the context,"
+    echo "    and wait for your confirmation before starting the next step."
+    echo ""
+    echo " TIP: Use 'agent-memory resume [id] --pick' to select a past session."
     echo "================================================================================"
     echo ""
     echo " [SYSTEM PROMPT FOR AI AGENT: CONTEXT HANDOFF]"
     echo "================================================================================"
-    echo "Hello AI Assistant. You are taking over a development session."
-    echo "Please read the following project context and task status carefully."
+    echo "⛔ MANDATORY PAUSE: ACTION PROHIBITED until Human Confirmation ⛔"
+    echo "================================================================================"
+    echo " !!! TOOL LOCK IN EFFECT !!!"
+    echo " YOU ARE PROHIBITED FROM USING ANY TOOLS (READ, SEARCH, SHELL, ETC.) YET."
+    echo " YOUR VERY FIRST RESPONSE MUST BE A SUMMARY BASED *ONLY* ON OUR MEMORY."
     echo ""
-    echo "## Global Context:"
-    grep -A 100 "## Current State" "$mem_dir/context.md" | head -20
+    echo " 1. READ the **Agentic Memory** (.agent-memory/* files) provided below."
+    echo " 2. SUMMARIZE the project state and next steps using ONLY this memory."
+    echo " 3. WAIT for the Human to say 'Proceed' before running tools or reading code."
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo ""
-    echo "## Active Tasks:"
-    grep -A 100 "## In Progress" "$mem_dir/tasks.md" | head -10
+    echo "Hello AI Assistant."
+    echo "IMPORTANT: Treat the files in '.agent-memory/' as the ABSOLUTE SOURCE OF TRUTH."
+    echo "Ignore any 'implementation' or 'todo' files in 'docs/' or root if they conflict."
+    echo "Please review the Recent Session Snapshot carefully."
+    echo ""
+    echo "## Project State Index:"
+    echo "The full project context is stored in the files below."
+    echo "!!! DO NOT READ THESE FILES YET !!!"
+    echo "- Global Context: $source_dir/context.md"
+    echo "- Active Tasks: $source_dir/tasks.md"
+    if [[ -f "$source_dir/implementation_plan.md" ]]; then
+        echo "- Implementation Plan: $source_dir/implementation_plan.md"
+    fi
     echo ""
     echo "## Last Session Snapshot:"
-    grep -A 50 "## Last Agent" "$mem_dir/snapshot.md" | head -15
+    grep -A 50 "## Last Agent" "$source_dir/snapshot.md" | head -15
     echo ""
 
     if [[ "$agent_id" != "generic" ]]; then
         echo "## Targeted Instructions for $agent_id:"
-        if grep -q "### $agent_id" "$mem_dir/snapshot.md"; then
+        # For guidelines, always pull from the LIVE agents.md if it exists, 
+        # otherwise fall back to source_dir/agents.md
+        local agents_file="$mem_dir/agents.md"
+        if [[ ! -f "$agents_file" && -f "$source_dir/agents.md" ]]; then
+            agents_file="$source_dir/agents.md"
+        fi
+
+        if [[ -f "$agents_file" ]] && grep -q "### $agent_id" "$agents_file"; then
             # Extract the section for the specific agent
-            sed -n "/### $agent_id/,/###/p" "$mem_dir/snapshot.md" | grep -v "###"
+            sed -n "/### $agent_id/,/###/p" "$agents_file" | grep "^[^#]"
         else
             echo "No specific instructions found for agent: $agent_id"
         fi
         echo ""
     fi
 
+    if [[ -z "$selection" ]]; then
+        echo "## Available Historical Sessions (Pick if current state is incorrect):"
+        local hist_dir="$mem_dir/history"
+        if [[ -d "$hist_dir" ]]; then
+            # Show last 5 history items
+            ls -r "$hist_dir" | head -5 | while read -r ts; do
+                local s_action="none"
+                local s_agent="unknown"
+                if [[ -f "$hist_dir/$ts/snapshot.md" ]]; then
+                    s_action=$(grep "Last completed action:" "$hist_dir/$ts/snapshot.md" | cut -d':' -f2- | xargs)
+                    s_agent=$(grep "Agent ID:" "$hist_dir/$ts/snapshot.md" | cut -d':' -f2- | xargs)
+                fi
+                echo "- $ts: [$s_agent] $s_action"
+            done
+        else
+            echo "No history available."
+        fi
+        echo ""
+    fi
+
     echo "--------------------------------------------------------------------------------"
     echo " [END SYSTEM PROMPT]"
-    echo " INSTRUCTION: "
-    echo " 1. Acknowledge this context and summarize the current state for the user."
-    echo " 2. Ask for the user's confirmation before proceeding with the 'Next Steps'."
-    echo " 3. Do NOT start work until the user confirms."
+    echo " INSTRUCTION (TOOL LOCK REITERATED): "
+    echo " 1. Summarize the RECENT SESSION based on the 'Last Session Snapshot' above."
+    echo "    - NOTE: If the snapshot is 'none' or empty, inform the user that you will need to read the 'Project State Index' files to recover the full project context."
+    echo " 2. DO NOT use tools (ReadFile, SearchText, etc.) to explore the codebase or read the 'Project State Index' files yet."
+    
+    if [[ -z "$selection" ]]; then
+        echo " 3. Inform the user that 'Historical Sessions' are available in our memory history."
+        echo " 4. Ask the user if they want to proceed with this 'Latest' memory (and the files in the index)."
+    else
+        echo " 3. Confirm that you are targeting the historical memory ($selection)."
+    fi
+    
+    echo " 5. MANDATORY: End your message by asking: 'May I proceed to read the Project State Index?'"
+    echo " 6. DO NOT START WORK or run any tools until the Human explicitly confirms."
     echo "================================================================================"
 }
 
@@ -346,21 +666,62 @@ cmd_list_agents() {
         exit 1
     fi
 
-    local snapshot_file="$mem_dir/snapshot.md"
-    if [[ ! -f "$snapshot_file" ]]; then
-        echo "No snapshot.md found."
+    local agents_file="$mem_dir/agents.md"
+    if [[ ! -f "$agents_file" ]]; then
+        echo "No agents.md found."
         return 0
     fi
 
-    echo "Available Agent Contexts:"
-    if grep -q "## Agent Contexts" "$snapshot_file"; then
-        # Extract headings starting with ### after ## Agent Contexts
-        sed -n '/## Agent Contexts/,$p' "$snapshot_file" | grep "^### " | sed 's/^### //' | while read -r agent; do
-            echo " - $agent"
-        done
-    else
-        echo "No Agent Contexts section found in snapshot.md"
+    echo "Available Agent Contexts (from agents.md):"
+    grep "^### " "$agents_file" | sed 's/^### //' | while read -r agent; do
+        echo " - $agent"
+    done
+}
+
+cmd_history() {
+    local mem_dir
+    if ! mem_dir=$(find_memory_dir); then
+        log_error "No .agent-memory/ found."
+        exit 1
     fi
+    
+    local hist_dir="$mem_dir/history"
+    if [[ ! -d "$hist_dir" ]]; then
+        echo "No history found for this project."
+        return 0
+    fi
+    
+    echo "Local Session History for $(basename "$(pwd)"):"
+    echo "--------------------------------------------------------------------------------"
+    ls -r "$hist_dir" | while read -r ts; do
+        local action="none"
+        if [[ -f "$hist_dir/$ts/snapshot.md" ]]; then
+            action=$(grep "Last completed action:" "$hist_dir/$ts/snapshot.md" | cut -d':' -f2- | xargs)
+        fi
+        printf " - %-20s | %s\n" "$ts" "$action"
+    done
+    echo "--------------------------------------------------------------------------------"
+}
+
+cmd_list_sessions() {
+    if [[ ! -f "$REGISTRY_FILE" ]]; then
+        echo "No global registry found at $REGISTRY_FILE"
+        return 0
+    fi
+    
+    echo "Global Agent Sessions (Recent Projects):"
+    echo "--------------------------------------------------------------------------------"
+    # Reverse to show newest first
+    # Using 'tail -r' if available (macOS), otherwise tac or generic sed
+    local sort_cmd="tail -r"
+    if ! command -v tail -r >/dev/null 2>&1; then
+        sort_cmd="sed '1!G;h;\$!d'"
+    fi
+    
+    eval "$sort_cmd" "$REGISTRY_FILE" | while IFS='|' read -r ts path agent action; do
+        printf " [%s] %-20s (Agent: %s) -> %s\n" "$ts" "$(basename "$path")" "$agent" "$action"
+    done
+    echo "--------------------------------------------------------------------------------"
 }
 
 cmd_status() {
@@ -399,8 +760,11 @@ shift
 case "$COMMAND" in
     init)     cmd_init "$@" ;;
     save)     cmd_save "$@" ;;
+    import)   cmd_import "$@" ;;
     resume)   cmd_resume "$@" ;;
     list-agents) cmd_list_agents "$@" ;;
+    history)   cmd_history "$@" ;;
+    list-sessions) cmd_list_sessions "$@" ;;
     status)   cmd_status "$@" ;;
     validate) cmd_validate "$@" ;;
     help)     show_help ;;
